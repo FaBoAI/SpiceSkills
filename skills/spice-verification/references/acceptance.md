@@ -1,0 +1,25 @@
+# Acceptance input and result contract
+
+`spice-verify run deck.cir spec.json --engine ngspice --output-dir runs` calls KiCadMCP, then writes `run_receipt.json` and `assessment.json` into its fresh run directory. A saved receipt can be re-evaluated with `spice-verify assess receipt.json spec.json --output assessment.json`. Files are never overwritten. Use trusted netlists: simulator control commands are executable local input.
+
+The JSON root contains `schema_version: 1`, `expected_stop_s`, optional `expected_start_s` (default 0), `purpose` (`requirements` or `negative_control`), nonempty `model_scope`, and a nonempty `checks` array. Unknown keys, missing bounds, non-finite numbers, and duplicate names are rejected. Bounds are inclusive and use SI numeric values, not SPICE suffix strings. See `examples/rc/spec.json` in the repository.
+
+Each check needs a unique `name`, saved RAW `signal` (case insensitive), `metric`, explicit `start_s < end_s`, at least one `min` / `max` bound, and a documentary `unit`. Optional `polarity: -1` reverses the signal before measurement; default is +1. The tool does not infer engineering units from a signal name.
+
+| Metric | Definition | Typical unit |
+|---|---|---|
+| `min`, `max` | Extrema of saved points plus interpolated window boundaries | V or A |
+| `time_mean` | Trapezoid integral / window duration, using KiCadMCP `summarize_raw` | V or A |
+| `integral` | Signed trapezoid integral | C for a current signal |
+| `positive_charge` | Integral of `max(polarity × current, 0)`, splitting linear zero crossings | C |
+| `above_duration` | Duration strictly above required `threshold`, splitting linear threshold crossings | s |
+
+Positive charge is useful when signed positive and negative currents would cancel. It cannot establish chemistry or thermal limits without an appropriate physical model. All metrics use linear interpolation of saved samples, with no extrapolation or hidden resampling. A measurement endpoint falling just outside the RAW extent is snapped to that boundary only when the difference is at most `8 × max(ulp(requested), ulp(boundary))`, to handle floating-point representations such as `.11` versus `0.10999999999999999`. The requested and effective window and `boundary_snapped` are recorded per check. This does not fill missing samples: a 1 ns end gap is rejected, and the independent expected-start coverage remains strict. Narrow events between samples remain unknown.
+
+Completion requires the KiCadMCP receipt's `completed`, `numerical_complete`, `process_success`, and `raw_valid` to be true, zero exit code, no timeout or fatal log, a finite strictly increasing transient RAW axis, and independent start/stop coverage from the specification. Threshold crossings use power-of-two normalization and positive-charge products use exponent decomposition to avoid spurious intermediate overflow. An unrepresentable/non-finite metric, normalization loss, or arithmetic overflow produces `INCOMPLETE`; it is never emitted as a JSON infinity or treated as a passing bound. A missing signal or invalid waveform also produces `INCOMPLETE`, with `specification_pass: null`. A completed requirements run produces `PASS` or `FAIL`. Negative controls produce `NEGATIVE_CONTROL_CONFIRMED` / `NEGATIVE_CONTROL_FAILED`, always with `specification_pass: null`. Never aggregate confirmed negative controls into a count of protection passes.
+
+`spice-verify compare coarse/assessment.json fine/assessment.json tolerances.json --output stability.json` requires identical acceptance-specification hashes, completed runs that met their respective expected outcome, and explicit tolerances for every metric. The allowed difference is `abs_tol + rel_tol × max(abs(coarse), abs(fine))`. Non-finite intermediate differences or tolerances produce `INCOMPLETE`, even when both inputs are finite. Results are `STABLE`, `UNSTABLE`, or `INCOMPLETE`; stability is not an extra specification pass. Declared maximum timesteps must have a ratio of 2. The comparison does not inspect solver configuration: verify both netlists differ only in maximum timestep before interpreting this as convergence evidence.
+
+`spice-verify corners template.cir parameters.json --output-dir runs/corners` expands `@@UPPERCASE@@` placeholders using finite numeric Cartesian products, capped at 256 cases by the Python API default. It rejects duplicate parameter values, unmatched/malformed `@@` placeholders (including lowercase names), existing output directories, and excess case counts before writing decks. The manifest records exact numeric choices and deck hashes. It does not run or judge the corners. A different corner may require a different expectation: do not blindly apply a nominal-only acceptance bound to every corner.
+
+CLI exit status is 0 for the expected outcome (`PASS`, confirmed negative control, `STABLE`, generated corners), 1 for a completed failed expectation or unstable comparison, and 2 for incomplete evidence / invalid input. Consumers must inspect `status` and `purpose`; exit 0 alone is not a protection pass.

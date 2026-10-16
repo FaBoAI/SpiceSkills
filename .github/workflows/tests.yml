@@ -1,0 +1,25 @@
+name: tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install native synthetic-test engine
+        run: sudo apt-get update && sudo apt-get install -y ngspice
+      - name: Install toolkit and tested KiCadMCP revision
+        run: |
+          python -m pip install 'git+https://github.com/FaBoAI/KiCadMCP.git@9afc43b7237e6f86e7defb5188737aa2d862d48c' build
+          python -m pip install -e .
+      - name: Unit and synthetic ngspice integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Build distributable package
+        run: python -m build

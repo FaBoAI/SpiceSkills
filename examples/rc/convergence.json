@@ -1,0 +1,9 @@
+{
+  "coarse_max_step_s": 0.00001,
+  "fine_max_step_s": 0.000005,
+  "checks": {
+    "settled_voltage": {"abs_tol": 0.00001, "rel_tol": 0.00001},
+    "tail_charge": {"abs_tol": 0.00000000001, "rel_tol": 0.01},
+    "transient_over_half": {"abs_tol": 0.000002, "rel_tol": 0.0001}
+  }
+}

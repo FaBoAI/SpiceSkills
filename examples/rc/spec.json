@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "expected_start_s": 0,
+  "expected_stop_s": 0.01,
+  "purpose": "requirements",
+  "model_scope": "Ideal 1 kohm / 1 uF RC step fixture. No parasitic, thermal, tolerance, or hardware validation.",
+  "checks": [
+    {"name": "settled_voltage", "signal": "v(output)", "metric": "min", "start_s": 0.008, "end_s": 0.01, "min": 0.999, "max": 1.001, "unit": "V"},
+    {"name": "tail_charge", "signal": "i(vstep)", "polarity": -1, "metric": "positive_charge", "start_s": 0.008, "end_s": 0.01, "min": 0, "max": 0.000000002, "unit": "C"},
+    {"name": "transient_over_half", "signal": "v(output)", "metric": "above_duration", "threshold": 0.5, "start_s": 0, "end_s": 0.01, "min": 0.0082, "max": 0.0084, "unit": "s"}
+  ]
+}

@@ -1,0 +1,7 @@
+Synthetic RC corner fixture
+Vstep input 0 PULSE(0 1 1m 1u 1u 20m 40m)
+R1 input output @@R_OHM@@
+C1 output 0 @@C_F@@
+.save V(input) V(output) I(Vstep)
+.tran @@MAX_STEP_S@@ 10m 0 @@MAX_STEP_S@@
+.end

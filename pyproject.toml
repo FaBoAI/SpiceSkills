@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fabo-spice-skills"
+version = "0.1.0"
+description = "Predefined waveform acceptance checks and reproducible SPICE verification skills"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["fabo-kicad-mcp>=0.1.0,<0.2"]
+
+[project.scripts]
+spice-verify = "spice_skills.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
